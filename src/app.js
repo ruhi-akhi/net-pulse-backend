@@ -9,7 +9,15 @@ require('express-async-errors');
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+
+// CORS পলিসি ফিক্স করার জন্য কাস্টম কনফিগারেশন
+app.use(cors({
+  origin: '*', // সাময়িকভাবে সব ডোমেইন ওপen রাখা হলো যাতে আপনার কোনো সাব-ডোমেইনও ব্লক না হয়
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
