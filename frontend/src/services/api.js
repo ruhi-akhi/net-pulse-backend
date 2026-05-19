@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+// এখানে আপনার Vercel-এর লাইভ ব্যাকএন্ড লিংকটি সরাসরি বসিয়ে দেওয়া হলো
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'https://net-pulse-backend-eight.vercel.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
