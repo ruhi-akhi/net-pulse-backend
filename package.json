@@ -1,0 +1,29 @@
+{
+  "name": "net-pulse-backend",
+  "version": "1.0.0",
+  "description": "Net Pulse: Internet speed test backend platform built with Node.js, Express, and MongoDB.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "lint": "echo \"No lint configured\""
+  },
+  "keywords": ["speed test", "backend", "express", "mongodb", "api"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "helmet": "^7.0.0",
+    "joi": "^17.10.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
