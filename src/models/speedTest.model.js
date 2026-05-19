@@ -6,7 +6,7 @@ const speedTestSchema = new mongoose.Schema(
     downloadSpeed: { type: Number, required: true },
     uploadSpeed: { type: Number, required: true },
     ping: { type: Number, required: true },
-    jitter: { type: Number, default: 0 },
+    jitter: { type: Number, required: true },
     ipAddress: { type: String },
     ispProvider: { type: String, default: 'unknown' },
     networkQuality: { type: String, required: true },
@@ -14,6 +14,9 @@ const speedTestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+speedTestSchema.index({ userId: 1, testTime: -1 });
+speedTestSchema.index({ downloadSpeed: 1 });
 
 const SpeedTest = mongoose.model('SpeedTest', speedTestSchema);
 

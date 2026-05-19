@@ -7,9 +7,12 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export default function Dashboard() {
   const { user, loading } = useContext(AuthContext);
   const [analytics, setAnalytics] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
   const [history, setHistory] = useState([]);
   const [error, setError] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [speedFilter, setSpeedFilter] = useState('all');
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,29 +21,55 @@ export default function Dashboard() {
       return;
     }
 
-    const fetchDashboard = async () => {
-      try {
-        const [analyticsRes, dashboardRes, historyRes] = await Promise.all([
-          API.get('/analytics'),
-          API.get('/analytics/dashboard'),
-          API.get('/tests'),
-        ]);
-
-        setAnalytics(analyticsRes.data.data);
-        setDashboardData(dashboardRes.data.data);
-        setHistory(historyRes.data.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Unable to fetch dashboard data.');
-      }
-    };
-
-    fetchDashboard();
+    if (user) {
+      fetchDashboardStats();
+      fetchHistory();
+    }
   }, [user, loading, navigate]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const [analyticsRes] = await Promise.all([API.get('/analytics')]);
+      setAnalytics(analyticsRes.data.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to fetch analytics data.');
+    }
+  };
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    setError(null);
+    try {
+      const query = {};
+      if (startDate) query.startDate = startDate;
+      if (endDate) query.endDate = endDate;
+      if (speedFilter === 'gt50') query.minSpeed = 50;
+      if (speedFilter === 'lt20') query.maxPing = 20;
+
+      const params = new URLSearchParams(query).toString();
+      const url = params ? `/tests?${params}` : '/tests';
+      const historyRes = await API.get(url);
+      setHistory(historyRes.data.data);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to fetch history.');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleDelete = async (testId) => {
+    try {
+      await API.delete(`/tests/${testId}`);
+      setHistory((current) => current.filter((item) => item._id !== testId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to delete the selected test.');
+    }
+  };
 
   const chartData = (history || []).slice(-10).map((item) => ({
     name: new Date(item.testTime || item.createdAt || item.timestamp).toLocaleDateString(),
-    Download: item.downloadSpeed || item.download_speed,
-    Upload: item.uploadSpeed || item.upload_speed,
+    Download: item.downloadSpeed ?? item.download_speed,
+    Upload: item.uploadSpeed ?? item.upload_speed,
   }));
 
   return (
@@ -76,8 +105,13 @@ export default function Dashboard() {
       </div>
 
       <div className="rounded-[32px] border border-neutral-900 bg-neutral-950/90 p-8 shadow-glow">
-        <h2 className="text-xl font-semibold text-white mb-6">Recent throughput trend</h2>
-        <div className="h-80">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Recent throughput trend</h2>
+            <p className="mt-2 text-sm text-gray-400">The latest session summary and chart snapshot for your latest tests.</p>
+          </div>
+        </div>
+        <div className="mt-8 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <defs>
@@ -98,8 +132,54 @@ export default function Dashboard() {
       </div>
 
       <div className="rounded-[32px] border border-neutral-900 bg-neutral-950/90 p-8 shadow-glow">
-        <h2 className="text-xl font-semibold text-white mb-6">History</h2>
-        <div className="overflow-x-auto">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-white">History</h2>
+            <p className="mt-2 text-sm text-gray-400">Filter your saved tests by date and speed.</p>
+          </div>
+          <button
+            type="button"
+            onClick={fetchHistory}
+            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-emerald-400"
+          >
+            Apply filters
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <label className="block text-sm text-gray-300">
+            <span className="text-xs uppercase tracking-[0.3em] text-gray-500">Start date</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="mt-2 w-full rounded-3xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+            />
+          </label>
+          <label className="block text-sm text-gray-300">
+            <span className="text-xs uppercase tracking-[0.3em] text-gray-500">End date</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="mt-2 w-full rounded-3xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+            />
+          </label>
+          <label className="block text-sm text-gray-300">
+            <span className="text-xs uppercase tracking-[0.3em] text-gray-500">Speed filter</span>
+            <select
+              value={speedFilter}
+              onChange={(e) => setSpeedFilter(e.target.value)}
+              className="mt-2 w-full rounded-3xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+            >
+              <option value="all">All tests</option>
+              <option value="gt50">Download over 50 Mbps</option>
+              <option value="lt20">Ping under 20 ms</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-8 overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-y-3 text-left text-sm text-gray-300">
             <thead>
               <tr>
@@ -108,23 +188,36 @@ export default function Dashboard() {
                 <th className="px-4 py-3 text-gray-500">Upload</th>
                 <th className="px-4 py-3 text-gray-500">Ping</th>
                 <th className="px-4 py-3 text-gray-500">Quality</th>
+                <th className="px-4 py-3 text-gray-500">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {(history || []).slice(0, 10).map((item) => (
+              {(history || []).map((item) => (
                 <tr key={item._id} className="rounded-3xl border border-neutral-900 bg-black/60 mb-2">
-                  <td className="px-4 py-4">{new Date(item.testTime || item.createdAt || item.timestamp).toLocaleString()}</td>
+                  <td className="px-4 py-4 text-gray-300">{new Date(item.testTime || item.createdAt || item.timestamp).toLocaleString()}</td>
                   <td className="px-4 py-4 font-semibold text-emerald-400">{item.downloadSpeed ?? item.download_speed} Mbps</td>
-                  <td className="px-4 py-4">{item.uploadSpeed ?? item.upload_speed} Mbps</td>
-                  <td className="px-4 py-4">{item.ping} ms</td>
+                  <td className="px-4 py-4 text-gray-300">{item.uploadSpeed ?? item.upload_speed} Mbps</td>
+                  <td className="px-4 py-4 text-gray-300">{item.ping} ms</td>
                   <td className="px-4 py-4">
                     <span className="inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">{item.networkQuality ?? item.network_quality}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item._id)}
+                      className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 transition hover:bg-red-500/20"
+                    >
+                      🗑️ Delete
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {loadingHistory && <p className="mt-4 text-sm text-gray-400">Refreshing history...</p>}
+        {!loadingHistory && history.length === 0 && <p className="mt-4 text-sm text-gray-400">No test records found for the selected filter.</p>}
       </div>
     </div>
   );
