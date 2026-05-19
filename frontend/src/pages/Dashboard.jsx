@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
@@ -13,6 +13,9 @@ export default function Dashboard() {
   const [endDate, setEndDate] = useState('');
   const [speedFilter, setSpeedFilter] = useState('all');
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export default function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [analyticsRes] = await Promise.all([API.get('/analytics')]);
+      const analyticsRes = await API.get('/analytics');
       setAnalytics(analyticsRes.data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to fetch analytics data.');
@@ -39,6 +42,7 @@ export default function Dashboard() {
   const fetchHistory = async () => {
     setLoadingHistory(true);
     setError(null);
+    setPage(1);
     try {
       const query = {};
       if (startDate) query.startDate = startDate;
@@ -57,20 +61,42 @@ export default function Dashboard() {
     }
   };
 
-  const handleDelete = async (testId) => {
+  const confirmDelete = (test) => {
+    setDeleteCandidate(test);
+  };
+
+  const cancelDelete = () => {
+    setDeleteCandidate(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteCandidate) return;
     try {
-      await API.delete(`/tests/${testId}`);
-      setHistory((current) => current.filter((item) => item._id !== testId));
+      await API.delete(`/tests/${deleteCandidate._id}`);
+      setHistory((current) => current.filter((item) => item._id !== deleteCandidate._id));
+      setDeleteCandidate(null);
+      setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to delete the selected test.');
+      setDeleteCandidate(null);
     }
   };
 
-  const chartData = (history || []).slice(-10).map((item) => ({
-    name: new Date(item.testTime || item.createdAt || item.timestamp).toLocaleDateString(),
-    Download: item.downloadSpeed ?? item.download_speed,
-    Upload: item.uploadSpeed ?? item.upload_speed,
-  }));
+  const pageCount = Math.max(1, Math.ceil(history.length / pageSize));
+  const visibleHistory = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return history.slice(start, start + pageSize);
+  }, [history, page]);
+
+  const chartData = useMemo(
+    () =>
+      history.slice(-10).map((item) => ({
+        name: new Date(item.testTime || item.createdAt || item.timestamp).toLocaleDateString(),
+        Download: item.downloadSpeed ?? item.download_speed,
+        Upload: item.uploadSpeed ?? item.upload_speed,
+      })),
+    [history]
+  );
 
   return (
     <div className="space-y-8">
@@ -192,7 +218,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {(history || []).map((item) => (
+              {visibleHistory.map((item) => (
                 <tr key={item._id} className="rounded-3xl border border-neutral-900 bg-black/60 mb-2">
                   <td className="px-4 py-4 text-gray-300">{new Date(item.testTime || item.createdAt || item.timestamp).toLocaleString()}</td>
                   <td className="px-4 py-4 font-semibold text-emerald-400">{item.downloadSpeed ?? item.download_speed} Mbps</td>
@@ -204,7 +230,7 @@ export default function Dashboard() {
                   <td className="px-4 py-4">
                     <button
                       type="button"
-                      onClick={() => handleDelete(item._id)}
+                      onClick={() => confirmDelete(item)}
                       className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 transition hover:bg-red-500/20"
                     >
                       🗑️ Delete
@@ -216,9 +242,61 @@ export default function Dashboard() {
           </table>
         </div>
 
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-400">
+          <p>{history.length} tests found</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} of {pageCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.min(prev + 1, pageCount))}
+              disabled={page === pageCount}
+              className="rounded-full border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
         {loadingHistory && <p className="mt-4 text-sm text-gray-400">Refreshing history...</p>}
         {!loadingHistory && history.length === 0 && <p className="mt-4 text-sm text-gray-400">No test records found for the selected filter.</p>}
       </div>
+
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+          <div className="w-full max-w-xl rounded-[32px] border border-neutral-800 bg-neutral-950 p-8 text-white shadow-glow">
+            <h3 className="text-2xl font-semibold text-white">Confirm delete</h3>
+            <p className="mt-4 text-sm text-gray-300">
+              Are you sure you want to delete the speed test from <span className="font-semibold text-white">{new Date(deleteCandidate.testTime || deleteCandidate.createdAt || deleteCandidate.timestamp).toLocaleString()}</span> with download <span className="text-emerald-400">{deleteCandidate.downloadSpeed ?? deleteCandidate.download_speed} Mbps</span>?
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-3xl bg-red-500 px-5 py-3 text-sm font-semibold text-white hover:bg-red-400 transition"
+              >
+                Delete permanently
+              </button>
+              <button
+                type="button"
+                onClick={cancelDelete}
+                className="rounded-3xl border border-neutral-700 bg-neutral-900 px-5 py-3 text-sm font-semibold text-gray-200 hover:border-white transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
