@@ -4,15 +4,15 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('express-async-errors');
 
-// Path corrected: points to the new 'api' folder
-const routes = require('./api/routes');
-const { errorHandler, notFoundHandler } = require('./api/middleware/error.middleware');
+// Paths updated: relative to the current 'api' folder
+const routes = require('./routes');
+const { errorHandler, notFoundHandler } = require('./middleware/error.middleware');
 
 const app = express();
 
 app.use(helmet());
 
-// Hardcoded your frontend URL for rock-solid CORS with credentials
+// CORS Configured for Vercel Frontend Domain
 app.use(cors({
   origin: 'https://net-pulse-frontend.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -1,8 +1,11 @@
 const dotenv = require('dotenv');
-const app = require('./app'); // app.js context is in the same folder, so this is correct
-const connectDatabase = require('./api/config/db'); // Path corrected to 'api'
+const path = require('path');
 
-dotenv.config();
+// Strictly pointing dotenv to look for the .env file inside the current folder (backend/api/)
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const app = require('./app'); 
+const connectDatabase = require('./config/db'); 
 
 const PORT = process.env.PORT || 5000;
 
