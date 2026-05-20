@@ -12,7 +12,7 @@ const app = express();
 
 app.use(helmet());
 
-// 💡 Multi-Origin CORS Configuration (Allows both local testing and production)
+//  Multi-Origin CORS Configuration (Allows both local testing and production)
 const allowedOrigins = [
   'https://net-pulse-frontend.vercel.app',
   'http://localhost:5173'

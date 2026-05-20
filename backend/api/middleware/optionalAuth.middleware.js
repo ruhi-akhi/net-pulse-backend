@@ -16,7 +16,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
       req.user = user;
     }
   } catch (err) {
-    // ignore invalid token for optional auth
+  
   }
 
   next();
