@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// এখানে Vercel-এর লাইভ ব্যাকএন্ড লিংকটি সরাসরি বসিয়ে দেওয়া হলো এবং withCredentials ট্রু করা হলো
+
 const API = axios.create({
-  // Use VITE_API_URL from environment (set in Vercel) with a safe fallback.
+
   baseURL: (import.meta.env.VITE_API_URL || 'https://net-pulse-backend.vercel.app').replace(/\/$/, '') + '/api',
   headers: {
     'Content-Type': 'application/json',
