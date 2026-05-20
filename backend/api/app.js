@@ -2,26 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const routes = require('./routes');
-const { errorHandler, notFoundHandler } = require('./middleware/error.middleware');
 require('express-async-errors');
+
+// Path corrected: points to the new 'api' folder
+const routes = require('./api/routes');
+const { errorHandler, notFoundHandler } = require('./api/middleware/error.middleware');
 
 const app = express();
 
 app.use(helmet());
 
-// ========================================================
-// ১. পুরোনো app.use(cors(...)) বাদ দিয়ে ঠিক এই জায়গায় নতুন কোডটি বসাও:
+// Hardcoded your frontend URL for rock-solid CORS with credentials
 app.use(cors({
-  origin: function (origin, callback) {
-    // যেকোনো অরিজিন বা ডোমেইনকেই ট্রু করে দেবে, কোনো এরর ধরবে না
-    return callback(null, true);
-  },
+  origin: 'https://net-pulse-frontend.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
-// ========================================================
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

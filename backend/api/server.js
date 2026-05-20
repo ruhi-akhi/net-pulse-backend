@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
-const app = require('./app');
-const connectDatabase = require('./config/db');
+const app = require('./app'); // app.js context is in the same folder, so this is correct
+const connectDatabase = require('./api/config/db'); // Path corrected to 'api'
 
 dotenv.config();
 
